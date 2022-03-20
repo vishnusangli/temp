@@ -49,6 +49,6 @@ for label in labels:
     ax.set_xlabel('Signal Efficiency')
     ax.set_ylabel('Background Rejection')
     fig.tight_layout()
-    fig.savefig(f'roc_{int(label)}.png')
+    fig.savefig(f'roc_{int(label)}.pdf')
     fig.show()
 # %%

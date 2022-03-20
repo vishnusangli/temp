@@ -3,7 +3,9 @@
 #%autoreload 2
 
 # %%
+from re import M
 import sys
+from sklearn.covariance import MinCovDet
 
 import tqdm
 import numpy as np
@@ -19,7 +21,8 @@ from hbbgbb import analysis
 from hbbgbb.models import graphs
 
 import settings
-
+STATSDIR = 'data_stats'
+MODELSTATS = 'model_stats'
 # %% Arguments
 features= ['trk_btagIp_d0','trk_btagIp_z0SinTheta']
 labels=[0,1,2]
@@ -142,7 +145,7 @@ for epoch in tqdm.trange(epochs):
     ax_t.set_ylim(1e-1, 1e3)
     ax_t.set_xlabel('epoch')
     ax_t.legend()
-    fig_t.savefig('training')
+    fig_t.savefig(f'{MODELSTATS}/training.pdf')
 
     # Plot the scores
     pred=t.model(g_test)
@@ -154,7 +157,7 @@ for epoch in tqdm.trange(epochs):
         ax_s[label].clear()
         myplt.labels(df_test,f'score{label}','label',fmt=fmt, ax=ax_s[label])
         ax_s[label].set_yscale('log')
-    fig_s.savefig('score')
+    fig_s.savefig(f'{MODELSTATS}/score.pdf')
 
 # %% Save output
 analysis.roc(df_test, 'score0', f'roc_{output}')

@@ -17,16 +17,18 @@ from hbbgbb.models import SimpleModel
 import settings
 import glob
 from tqdm import tqdm
+DATADIR = 'explore_output'
+IMG_SIZE = 15
 # %%
 class Img_give:
     etamin=-0.1
     etamax= 0.1
-    etabin=15
+    etabin=IMG_SIZE
     etawdt=np.divide((etamax-etamin),etabin)
 
     phimin=-0.1
     phimax=0.1
-    phibin=15
+    phibin=IMG_SIZE
     phiwdt=np.divide((phimax-phimin),phibin)
 
     def give_pos(part_eta, part_phi, dim_1, dim_2):
@@ -73,7 +75,7 @@ def load_calo_data(tag='r10201', givecounts = False):
     feature_data = data.load_data(tag)
     #Apply feature data filters (mass > 500Gev, nconstit >2) on images
     #try to trust order is upheld
-    img_data, counts = Img_give.generate_images(c_pt, c_deta, c_dphi, shape = (15, 15), index_filter=feature_data.index)
+    img_data, counts = Img_give.generate_images(c_pt, c_deta, c_dphi, shape = (IMG_SIZE, IMG_SIZE), index_filter=feature_data.index)
 
     data.label(feature_data)
     label_types = ['label0', 'label1', 'label2']
@@ -85,7 +87,7 @@ def load_calo_data(tag='r10201', givecounts = False):
 def plt_img(data):
     shape = (5, 4)
     start = 0
-    fig, ax = plt.subplots(shape[0], shape[1], figsize = (15, 15), sharey = True)
+    fig, ax = plt.subplots(shape[0], shape[1], figsize = (IMG_SIZE, IMG_SIZE), sharey = True)
     fig.patch.set_facecolor('grey')
     for elem in range(1, (shape[0] * shape[1]) + 1):
         plt.subplot(shape[0], shape[1], elem)
@@ -105,23 +107,37 @@ def mylog(x):
     return np.log(x)
 mylog = np.vectorize(mylog)
 
-def my_engineering(data):
-    data = mylog(data)
-    data += 1
-    data = mylog(data)
-    val = np.max(data)
-    data = np.divide(data, val)
-    return data
+class Feature_Eng:
 
-def sec_img_eng(data):
-    data = mylog(data)
-    data = np.divide(data, np.nanmax(data))
-    return data
+    def my_engineering(data):
+        val = mylog(data)
+        val += 1
+        val = mylog(val)
+        maxval = np.max(data)
+        val = np.divide(val, maxval)
+        return val
 
+    def sec_img_eng(data):
+        val = mylog(data)
+        val = np.divide(val, np.nanmax(val))
+        return val
 
+    def root_eng(data, factor = 1/2): #current ones are 1/2 or 1/4
+        val = mypow(data, factor)
+        val = np.divide(val, np.max(val))
+        val = mylog(val)
+        return val
+
+    def neg_pow(data, factor = -1):
+        val = mypow(data, factor)
+        #val = np.divide(val, np.max(val))
+        return val
+
+    current = my_engineering
 # %%
 def avg_img_perlabel(img_data, labels, name = 'avg_img_perlabel'):
     fig, ax = plt.subplots(1, 3, sharex = True)
+
     fig.patch.set_facecolor('white')
     for i in range(3):
         elems = eval(f"labels.label{i}")
@@ -135,15 +151,15 @@ def avg_img_perlabel(img_data, labels, name = 'avg_img_perlabel'):
         plt.title(f"label {i}")
     plt.colorbar()
     if len(name) > 0:
-        plt.savefig(f'{name}.png')
+        plt.savefig(f'{DATADIR}/{name}.pdf')
     else:
         plt.show()
 # %%
-def test_dist(img_data, labels, func = sec_img_eng):
+def test_dist(img_data, labels, func = Feature_Eng.current):
     fig, ax = plt.subplots(3, 2, figsize = (12, 12))
     fig.patch.set_facecolor('white')
     for i in range(3):
-        elems = img_data[eval(f"labels.label1")]
+        elems = img_data[eval(f"labels.label{i}")]
         elems = elems[elems != 0]
         ax1 = ax[i, 0]
         n, b, p = ax1.hist(elems)
@@ -157,37 +173,43 @@ def test_dist(img_data, labels, func = sec_img_eng):
         n, b, p = ax1.hist(elems)
         ax1.set_title(f"label {i} Engineered")
     plt.tight_layout()
+    plt.savefig(f"{DATADIR}/img_dist.pdf")
 
 # %%
-def try1(data):
-    val = np.power(data, -4)
-    return val
+
 def disp(data, func = lambda x:x, **kwargs):
     plt.imshow(func(data, **kwargs))
     plt.colorbar()
 def mypow(data, pow):
     if data == 0:
         return 0
-    return np.power(data, pow)
+    val =  np.power(data, pow)
+    if np.isnan(val):
+        return 0
+    return val
 mypow = np.vectorize(mypow)
 
-def try2(data, factor = 1/2): #current ones are 1/2 or 1/4
-    val = mypow(data, factor)
-    val = np.divide(val, np.max(val))
-    #val = mylog(val)
-    return val
+
 
 
 # %%
-fjc_train = data.load_data_constit()
-df_train=data.load_data()
+#fjc_train = data.load_data_constit()
+#df_train=data.load_data()
+#data.label(df_train)
+# %%
+def isnanzero(value):
+    return np.isnan(value) or value == 0
+isnanzero = np.vectorize(isnanzero)
 
+# %%
 def iterate(df_train, fjc_train, first = 'pt', sec = 'trk_d0'):
     fjc_train = fjc_train[df_train.index.values]
     for (i, fatjet), constit in tqdm(zip(df_train.iterrows(), fjc_train), total = len(df_train.index)):
-        constit = constit[~np.isnan(constit[first])]
-        if True in np.isnan(constit[sec]):
+        constit = constit[~isnanzero(constit[first])]
+        if True in isnanzero(constit[sec]):
             print(f"{i} error")
             break
-#iterate(df_train, fjc_train)
+
+# %%
+
 # %%

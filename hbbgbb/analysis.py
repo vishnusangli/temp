@@ -44,7 +44,7 @@ def roc(df, score, output=None, plot=True):
         fig.legend(title='Background')
         fig.tight_layout()
         if output is not None:
-            fig.savefig(output)
+            fig.savefig(f"{output}.pdf")
         fig.show()
 
     # Save ROC curves

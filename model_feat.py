@@ -17,7 +17,8 @@ from hbbgbb import data
 from hbbgbb import analysis
 
 from hbbgbb.models import SimpleModel
-
+STATSDIR = 'data_stats'
+MODELSTATS = 'model_stats'
 # %% Arguments
 features=['mass', 'C2','D2','e3','Tau32_wta','Split12','Split23']
 output='feat'
@@ -49,7 +50,7 @@ labels=tf.convert_to_tensor(df.label)
 # %% Create features
 for feature in features+['nConstituents']:
   myplt.labels(df, feature, 'label', fmt=fmt)
-  plt.savefig(f'labels_{feature}.png')
+  plt.savefig(f'{STATSDIR}/labels_{feature}.pdf')
   plt.show()
   plt.clf()
 
@@ -86,7 +87,7 @@ plt.yscale('log')
 plt.ylabel('loss')
 plt.ylim(1e-1, 1e1)
 plt.xlabel('epoch')
-plt.savefig('training.png')
+plt.savefig(f'{MODELSTATS}/training.pdf')
 plt.show()
 plt.clf()
 # %%
@@ -99,23 +100,26 @@ df['score2']=predsm[:,2]
 # %% Plot distributions of the two predictions
 for feature in features+['nConstituents']:
   myplt.labels(df, feature, 'label', 'pred', fmt=fmt)
-  plt.savefig(f'predictions_{feature}.png')
+  plt.savefig(f'{STATSDIR}/predictions_{feature}.png')
   plt.show()
   plt.clf()
 
 # %%
 myplt.labels(df,'score0','label',fmt=fmt)
-plt.savefig('score0.png')
+plt.savefig(f'{MODELSTATS}/score0.png')
+plt.title(f"model {output} label0 - hbb")
 plt.show()
 plt.clf()
 # %%
 myplt.labels(df,'score1','label',fmt=fmt)
-plt.savefig('score1.png')
+plt.savefig(f'{MODELSTATS}/score1.png')
+plt.title(f"model {output} label1 - QCD(bb)")
 plt.show()
 plt.clf()
 # %%
 myplt.labels(df,'score2','label',fmt=fmt)
-plt.savefig('score2.png')
+plt.savefig(f'{MODELSTATS}/score2.png')
+plt.title(f"model {output} label2 - QCD(other)")
 plt.show()
 plt.clf()
 
